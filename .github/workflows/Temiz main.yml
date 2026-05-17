@@ -1,4 +1,4 @@
-name: Build SefaAi Booster APK Ultimate
+name: Build SefaAi Booster APK Clean Fixed
 on: [push, workflow_dispatch]
 
 jobs:
@@ -24,33 +24,46 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y git zip unzip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev libsqlite3-dev sqlite3 bzip2 libbz2-dev
 
+    - name: Install Android SDK Manually
+      run: |
+        # Temiz ve bağımsız bir SDK klasörü kuruyoruz
+        mkdir -p /home/runner/android-sdk/cmdline-tools
+        cd /home/runner/android-sdk/cmdline-tools
+        wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline.zip
+        unzip -q cmdline.zip
+        mv cmdline-tools latest
+        
+        # Yolları tanımlıyoruz ve gerekli paketleri kuruyoruz
+        export ANDROID_HOME=/home/runner/android-sdk
+        export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
+        
+        # Build-tools 33 ve gerekli platformu önden yüklüyoruz
+        yes | ./latest/bin/sdkmanager --licenses
+        ./latest/bin/sdkmanager "platform-tools" "build-tools;33.0.1" "platforms;android-33" "ndk;25.2.9519653"
+        yes | ./latest/bin/sdkmanager --licenses
+
     - name: Install Buildozer and Cython
       run: |
         pip install --upgrade pip
         pip install "cython<3.0.0" buildozer kivy
 
-    - name: Build APK and Force License Accept
+    - name: Run Buildozer Android Debug
       run: |
-        # 1. Adım: Buildozer'ı başlatıyoruz ki gerekli SDK klasörlerini kendi orijinal haliyle indirsin.
-        # İlk aşamada lisans hatası verip durana kadar arka planda çalıştıracağız.
-        buildozer android debug || true
+        # Buildozer'ın kendi SDK'sını kurmasını engellemek için yolları buraya mühürlüyoruz
+        mkdir -p /home/runner/.buildozer/android/platform
+        ln -s /home/runner/android-sdk /home/runner/.buildozer/android/platform/android-sdk
+        ln -s /home/runner/android-sdk/ndk/25.2.9519653 /home/runner/.buildozer/android/platform/android-ndk-r25b
         
-        # 2. Adım: Buildozer'ın az önce indirdiği orijinal sdkmanager'ı bulup TÜM lisansları zorla onaylatıyoruz.
-        if [ -f /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager ]; then
-          yes | /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses
-        elif [ -f /home/runner/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager ]; then
-          yes | /home/runner/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager --licenses
-        fi
-        
-        # 3. Adım: Lisanslar artık tamamen onaylandığı için derlemeyi asıl şimdi başarıyla tamamlaması için tetikliyoruz.
         buildozer android debug
       env:
         BUILDOZER_WARN_ON_ROOT: 0
+        ANDROID_HOME: /home/runner/android-sdk
+        ANDROID_SDK_ROOT: /home/runner/android-sdk
 
     - name: Upload Compiled APK (Deep Search)
       uses: actions/upload-artifact@v4
       with:
-        name: sefaai-gamebooster-ultimate
+        name: sefaai-gamebooster-fixed
         path: |
           ./bin/*.apk
           ./**/.buildozer/android/platform/build/dists/*/*.apk
