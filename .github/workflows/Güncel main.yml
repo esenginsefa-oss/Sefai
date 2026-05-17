@@ -23,6 +23,15 @@ jobs:
         pip install --upgrade pip
         pip install "cython<3.0.0" buildozer kivy
 
+    - name: Force Accept Android Licenses
+      run: |
+        mkdir -p ~/.android
+        touch ~/.android/repositories.cfg
+        # Buildozer'ın varsayılan olarak SDK indirdiği gizli klasördeki lisansları otomatik onayla
+        mkdir -p ~/.buildozer/android/platform/android-sdk/licenses
+        yes | sdkmanager --licenses || true
+        echo -e "\n89bfd2b8517b996e474f757d45d37ff5e677d04e\n24333f8a63b6825ea9c5514f83c2829b004d1fee\n9b20b758b04d10e6656fa41304b9e16a65d363b5\n4f67c834d43be3004b9a14cb39fb573af1287466\n659f1d17a50b3e61f18b1d9c743e47348b4a554b\n7a13401e434c74f90c72a1143b4124207e411172" > ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license || true
+
     - name: Run Buildozer Android Debug
       run: |
         buildozer android debug
