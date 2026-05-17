@@ -19,23 +19,6 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Pre-create Buildozer SDK Directories and Force Licenses
-      run: |
-        # Buildozer'ın aradığı gizli SDK yollarını önceden zorla açıyoruz
-        mkdir -p /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin
-        mkdir -p /home/runner/.buildozer/android/platform/android-sdk/tools/bin
-        
-        # Resmi Google komut satırı araçlarını indirip klasöre yerleştiriyoruz
-        wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline.zip
-        unzip -q cmdline.zip
-        mv cmdline-tools/* /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/
-        
-        # Eski ve yeni sdkmanager yolları arasında köprü kuruyoruz
-        ln -sf /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager /home/runner/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager
-        
-        # Gelebilecek tüm lisans onaylarını peşinen "evet" diyerek mühürlüyoruz
-        yes | /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses
-
     - name: Install System Dependencies
       run: |
         sudo apt-get update
@@ -46,8 +29,20 @@ jobs:
         pip install --upgrade pip
         pip install "cython<3.0.0" buildozer kivy
 
-    - name: Run Buildozer Android Debug
+    - name: Build APK and Force License Accept
       run: |
+        # 1. Adım: Buildozer'ı başlatıyoruz ki gerekli SDK klasörlerini kendi orijinal haliyle indirsin.
+        # İlk aşamada lisans hatası verip durana kadar arka planda çalıştıracağız.
+        buildozer android debug || true
+        
+        # 2. Adım: Buildozer'ın az önce indirdiği orijinal sdkmanager'ı bulup TÜM lisansları zorla onaylatıyoruz.
+        if [ -f /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager ]; then
+          yes | /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses
+        elif [ -f /home/runner/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager ]; then
+          yes | /home/runner/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager --licenses
+        fi
+        
+        # 3. Adım: Lisanslar artık tamamen onaylandığı için derlemeyi asıl şimdi başarıyla tamamlaması için tetikliyoruz.
         buildozer android debug
       env:
         BUILDOZER_WARN_ON_ROOT: 0
