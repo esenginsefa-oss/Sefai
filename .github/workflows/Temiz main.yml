@@ -21,19 +21,19 @@ jobs:
 
     - name: Pre-create Buildozer SDK Directories and Force Licenses
       run: |
-        # Buildozer'ın gizli SDK klasör mimarisini önceden zorla oluşturuyoruz
+        # Buildozer'ın aradığı gizli SDK yollarını önceden zorla açıyoruz
         mkdir -p /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin
         mkdir -p /home/runner/.buildozer/android/platform/android-sdk/tools/bin
         
-        # Resmi cmdline-tools paketini indirip Buildozer'ın klasörüne açıyoruz
+        # Resmi Google komut satırı araçlarını indirip klasöre yerleştiriyoruz
         wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline.zip
         unzip -q cmdline.zip
         mv cmdline-tools/* /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/
         
-        # Buildozer'ın aradığı eski sdkmanager yoluna köprü (link) kuruyoruz
+        # Eski ve yeni sdkmanager yolları arasında köprü kuruyoruz
         ln -sf /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager /home/runner/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager
         
-        # İŞTE KRİTİK NOKTA: Buildozer'ın kendi klasöründeki tüm Google lisanslarını peşinen onaylıyoruz
+        # Gelebilecek tüm lisans onaylarını peşinen "evet" diyerek mühürlüyoruz
         yes | /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses
 
     - name: Install System Dependencies
@@ -51,4 +51,13 @@ jobs:
         buildozer android debug
       env:
         BUILDOZER_WARN_ON_ROOT: 0
-        
+
+    - name: Upload Compiled APK (Deep Search)
+      uses: actions/upload-artifact@v4
+      with:
+        name: sefaai-gamebooster-ultimate
+        path: |
+          ./bin/*.apk
+          ./**/.buildozer/android/platform/build/dists/*/*.apk
+          ./**/*.apk
+          
