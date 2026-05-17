@@ -19,6 +19,18 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
+    - name: Install Android SDK & NDK Officially
+      uses: android-actions/setup-android@v3
+      with:
+        log-accepted-android-sdk-licenses: false
+
+    - name: Install Correct Android Components
+      run: |
+        # Doğru build-tools ve platform paketlerini kuruyoruz
+        sdkmanager --install "platform-tools" "build-tools;33.0.1" "platforms;android-33" "ndk;25.2.9519653"
+        # Tüm lisans sözleşmelerini sisteme peşinen onaylatıyoruz
+        yes | sdkmanager --licenses
+
     - name: Install System Dependencies
       run: |
         sudo apt-get update
@@ -29,31 +41,18 @@ jobs:
         pip install --upgrade pip
         pip install "cython<3.0.0" buildozer kivy
 
-    - name: Run Buildozer to Download SDK
+    - name: Run Buildozer with Pre-installed SDK
       run: |
-        # 1. ADIM: Buildozer'ı sadece klasörleri ve sdkmanager'ı indirsin diye başlatıyoruz.
-        # Aidl hatası verip ilk seferde çökmesi çok normal, durdurmuyoruz (|| true dedik).
-        buildozer android debug || true
-
-    - name: Force Fix Android Licenses and Build Tools
-      run: |
-        # 2. ADIM: Buildozer'ın indirdiği sdkmanager'ın yolunu tam olarak buluyoruz.
-        export SDK_BIN="/home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin"
-        if [ ! -d "$SDK_BIN" ]; then
-          export SDK_BIN="/home/runner/.buildozer/android/platform/android-sdk/tools/bin"
-        fi
+        # Buildozer kendi klasörünü açmasın diye sunucudaki resmi SDK yollarını bağlıyoruz
+        mkdir -p /home/runner/.buildozer/android/platform
+        ln -s /usr/local/lib/android/sdk /home/runner/.buildozer/android/platform/android-sdk
         
-        # 3. ADIM: Buildozer'ın takıldığı o Build-Tools 33 ve 37 lisanslarını zorla onaylayıp kuruyoruz!
-        yes | $SDK_BIN/sdkmanager --licenses
-        $SDK_BIN/sdkmanager "build-tools;33.0.1" "platform-tools" "platforms;android-33"
-        yes | $SDK_BIN/sdkmanager --licenses
-
-    - name: Final Buildozer Run
-      run: |
-        # 4. ADIM: Artık Aidl ve lisans eksikleri tamamen kapandığı için derlemeyi başarıyla bitiriyoruz.
+        # Buildozer'ı çalıştırıyoruz
         buildozer android debug
       env:
         BUILDOZER_WARN_ON_ROOT: 0
+        ANDROID_HOME: /usr/local/lib/android/sdk
+        ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
     - name: Upload Compiled APK (Deep Search)
       uses: actions/upload-artifact@v4
