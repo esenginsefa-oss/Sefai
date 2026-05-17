@@ -23,6 +23,12 @@ jobs:
         pip install --upgrade pip
         pip install "cython<3.0.0" buildozer kivy
 
+    - name: Automatically Accept Android Licenses
+      run: |
+        mkdir -p ~/.android
+        touch ~/.android/repositories.cfg
+        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
     - name: Run Buildozer Android Debug
       run: |
         buildozer android debug
