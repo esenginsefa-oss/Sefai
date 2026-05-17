@@ -14,7 +14,10 @@ warn_on_root = 1
 [android]
 android.permissions = SYSTEM_ALERT_WINDOW, WAKE_LOCK, FOREGROUND_SERVICE
 android.api = 33
-android.minapi = 21
-android.archs = arm64-v8a 
 android.build_tools_version = 33.0.1	
+android.minapi = 21
+android.archs = arm64-v8a	
 android.accept_sdk_license = True
+android.ndk = 25.2.9519653
+android.sdk_components = tools,platform-tools,build-tools;33.0.1
+
